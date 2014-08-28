@@ -1,0 +1,16 @@
+8fcff8be625d626faca4e6fbace3a9d7 *DESCRIPTION
+dd0319ae1eb0b5ac2015f0cd2c51dd28 *NAMESPACE
+1b31424de4d91232305daddb52a38d43 *R/parsedate-package.r
+7c0b5c9f72349b6289fc431d4d3e344d *README.md
+4ea82a0bee64b6c7f8d62b248a8e8bf7 *man/format_iso_8601.Rd
+bcb0855e6e8714a7abcc655b4f261ae8 *man/parse_date.Rd
+69863970fbd3ecbe0fb0c3813e2386a2 *man/parse_iso_8601.Rd
+b6dc4f674b269b22f093d6e54d065170 *man/parsedate-package.Rd
+5465b97ff6ac07e74161fc619e8c16ee *src/date.c
+fa8b26be0bfaa51aa5cb7265b368298b *src/date.h
+bd08e51b58dc8c7b66827bcc962c9300 *src/mingw.c
+9bfb38533de7b535cf7b62457e0dba1b *src/mingw.h
+ed94ac1b110b327fd3dd5c70861491ab *src/rdate.c
+ed3fcb5a70083f639bd29c1092153a90 *tests/testthat.R
+946b6717d412c49cafab5c8601e1be4e *tests/testthat/test-git.r
+7fd0c11a49914c4cd3f40dd67f295ef3 *tests/testthat/test-iso8601.r

@@ -402,6 +402,49 @@ static int match_digit(const char *date, struct tm *tm, int *offset, int *tm_gmt
 	}
 
 	/*
+	 * If it has eight digits, then we pretend that it has dashes
+	 * in a XXXX-XX-XX format
+	 */
+	if (n == 8) {
+	        char xx[11];
+		int match;
+		xx[0] = date[0];
+		xx[1] = date[1];
+		xx[2] = date[2];
+		xx[3] = date[3];
+		xx[4] = '-';
+		xx[5] = date[4];
+		xx[6] = date[5];
+		xx[7] = '-';
+		xx[8] = date[6];
+		xx[9] = date[7];
+		xx[10] = '\0';
+		match = match_multi_number(num / 10000, xx[4], xx, xx + 4, tm);
+		if (match - 2 >= 0)
+		        return match - 2;
+	}
+
+	/* If it has six digits, then we pretend that it has dashes in
+	 * a XX-XX-XX format
+	 */
+	if (n == 6) {
+	        char xx[9];
+		int match;
+		xx[0] = date[0];
+		xx[1] = date[1];
+		xx[2] = '-';
+		xx[3] = date[2];
+		xx[4] = date[3];
+		xx[5] = '-';
+		xx[6] = date[4];
+		xx[7] = date[5];
+		xx[8] = '\0';
+		match = match_multi_number(num / 10000, xx[2], xx, xx + 2, tm);
+		if (match - 2 >= 0)
+		        return match - 2;
+	}
+
+	/*
 	 * Ignore lots of numerals. We took care of 4-digit years above.
 	 * Days or months must be one or two digits.
 	 */
@@ -536,7 +579,7 @@ int parse_date_basic(const char *date, unsigned long *timestamp, int *offset)
 	tm.tm_min = -1;
 	tm.tm_sec = -1;
 	*offset = -1;
-	tm_gmt = 0;
+	tm_gmt = 1;
 
 	if (*date == '@' &&
 	    !match_object_header_date(date + 1, timestamp, offset))
@@ -870,7 +913,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 	return end;
 }
 
-static const char *approxidate_digit(const char *date, struct tm *tm, int *num)
+static const char *approxidate_digit(const char *date, struct tm *tm, int *num, int *touched)
 {
 	char *end;
 	unsigned long number = strtoul(date, &end, 10);
@@ -882,14 +925,66 @@ static const char *approxidate_digit(const char *date, struct tm *tm, int *num)
 	case '-':
 		if (isdigit(end[1])) {
 			int match = match_multi_number(number, *end, date, end, tm);
-			if (match)
+			if (match) {
+			        *touched = 1;
 				return date + match;
+			}
 		}
 	}
 
+	/*
+	 * If it has eight digits, then we pretend that it has dashes
+	 * in a XXXX-XX-XX format
+	 */
+	if (end - date == 8) {
+	        char xx[11];
+		int match;
+		xx[0] = date[0];
+		xx[1] = date[1];
+		xx[2] = date[2];
+		xx[3] = date[3];
+		xx[4] = '-';
+		xx[5] = date[4];
+		xx[6] = date[5];
+		xx[7] = '-';
+		xx[8] = date[6];
+		xx[9] = date[7];
+		xx[10] = '\0';
+		match = match_multi_number(number / 10000, xx[4], xx, xx + 4, tm);
+		if (match - 2 >= 0) {
+		        *touched = 1;
+		        return date + match - 2;
+		}
+	}
+
+	/* If it has six digits, then we pretend that it has dashes in
+	 * a XX-XX-XX format
+	 */
+	if (end - date == 6) {
+	        char xx[9];
+		int match;
+		xx[0] = date[0];
+		xx[1] = date[1];
+		xx[2] = '-';
+		xx[3] = date[2];
+		xx[4] = date[3];
+		xx[5] = '-';
+		xx[6] = date[4];
+		xx[7] = date[5];
+		xx[8] = '\0';
+		match = match_multi_number(number / 10000, xx[2], xx, xx + 2, tm);
+		if (match - 2 >= 0) {
+		        *touched = 1;
+		        return date + match - 2;
+		}
+	}
+
+
 	/* Accept zero-padding only for small numbers ("Dec 02", never "Dec 0002") */
-	if (date[0] != '0' || end - date <= 2)
+	if (date[0] != '0' || end - date <= 2) {
+	        *touched = 1;
 		*num = number;
+	}
 	return end;
 }
 
@@ -927,7 +1022,7 @@ static unsigned long approxidate_str(const char *date,
 	int number = 0;
 	int touched = 0;
 	struct tm tm, now;
-	time_t time_sec, n;
+	time_t time_sec, n, dst = 0;
 	int fill_mode = 1; 	/* 1: current time, 0: zero */
 
 	time_sec = tv->tv_sec;
@@ -948,8 +1043,7 @@ static unsigned long approxidate_str(const char *date,
 		date++;
 		if (isdigit(c)) {
 			pending_number(&tm, &number);
-			date = approxidate_digit(date-1, &tm, &number);
-			touched = 1;
+			date = approxidate_digit(date-1, &tm, &number, &touched);
 			continue;
 		}
 		if (isalpha(c))
@@ -993,7 +1087,12 @@ static unsigned long approxidate_str(const char *date,
 
 	/* Fill in missing fields */
 	n = mktime(&tm);
-	return gm_time_t(n, local_tzoffset(n));
+
+	/* Fix for non-dst */
+	if (!tm.tm_isdst)
+	        dst = 100;
+
+	return gm_time_t(n, local_tzoffset(n) + dst);
 }
 
 unsigned long approxidate_relative(const char *date, const struct timeval *tv)

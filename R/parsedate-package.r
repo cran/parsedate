@@ -8,7 +8,7 @@
 #'     validator.
 #'   \item \code{\link{parse_date}} can parse a date when you don't know
 #'     which format it is in. First it tries all ISO 8601 formats.
-#'     Then it tries git's versatize date parser. Lastly, it tries
+#'     Then it tries git's versatile date parser. Lastly, it tries
 #'     \code{as.POSIXct}.
 #'   \item \code{\link{format_iso_8601}} formats a date (and time) in
 #'     a specific ISO 8601 format.
@@ -16,7 +16,7 @@
 #'
 #' @docType package
 #' @name parsedate-package
-#' @useDynLib parsedate
+#' @useDynLib parsedate, .registration = TRUE, .fixes = "C_"
 #' @importFrom methods reconcilePropertiesAndPrototype
 
 NULL
@@ -53,6 +53,7 @@ yj <- function(x) as.POSIXct(x, format = "%Y %j", tz = "UTC")
 #'     to make sure that we can parse at least as many dates as
 #'     \code{as.POSIXct}.
 #' }
+#' \code{parse_date} returns quickly in case of empty input elements.
 #'
 #' @param dates A character vector. An error is reported if
 #'   the function cannot coerce this parameter to a character vector.
@@ -79,14 +80,30 @@ yj <- function(x) as.POSIXct(x, format = "%Y %j", tz = "UTC")
 #'
 #' # But not for this, because this is ISO 8601
 #' parse_date("2014")
+#'
+#' # Handle vectors and empty input
+#' parse_date(c("2014","2015","","2016"))
 
 parse_date <- function(dates, approx = TRUE) {
-  result <- parse_iso_8601(dates)
-  result[is.na(result)] <- parse_git(dates[is.na(result)],
+  result <- rep(as.POSIXct(NA), length = length(dates))
+  dates <- trimws(dates)
+  dates <- sapply(dates, replace.unparseable, USE.NAMES = FALSE)
+
+  result[dates.to.parse(dates, result)] <- parse_iso_8601(dates[dates.to.parse(dates, result)])
+  result[dates.to.parse(dates, result)] <- parse_git(dates[dates.to.parse(dates, result)],
                                      approx = approx)
-  result[is.na(result)] <- parse_rbase(dates[is.na(result)])
+  result[dates.to.parse(dates, result)] <- parse_rbase(dates[dates.to.parse(dates, result)])
   result
 }
+
+replace.unparseable <- function(date) {
+  gsub(pattern = "[^ A-Za-z0-9:.-/]", replacement = "", date)
+}
+
+dates.to.parse <- function(dates, results) {
+  dates != "" & is.na(results)
+}
+
 
 ## --------------------------------------------------------------------
 #' Parse date from an ISO 8601 format
@@ -132,7 +149,7 @@ parse_iso_8601 <- function(dates) {
   dates <- as.character(dates)
   match <- regexpr(iso_regex, dates, perl = TRUE)
   matching <- sapply(match, function(x)
-    ! identical(x, -1L) && ! identical(x, -1))
+    ! identical(x, -1L) & ! identical(x, -1))
   match_list <- regexp_to_df(dates, match)
   result <- rep(NA_real_, length(dates))
   result[matching] <- sapply(match_list, parse_iso_single)
@@ -151,7 +168,7 @@ regexp_to_df <- function(text, match) {
   lapply(seq_len(sum(positive)), function(i) {
     data.frame(start = g_start[i,],
                length = g_length[i,],
-               match = substring(text[i], g_start[i,],
+               match = substring(g_text[i], g_start[i,],
                  g_start[i,] + g_length[i,] - 1),
                stringsAsFactors = FALSE)
   })
@@ -283,7 +300,7 @@ parse_rbase <- function(dates) {
 }
 
 parse_git <- function(dates, approx) {
-  .Call("R_parse_date", dates, approx, PACKAGE="parsedate")
+  .Call(C_R_parse_date, dates, approx)
 }
 
 ## --------------------------------------------------------------------

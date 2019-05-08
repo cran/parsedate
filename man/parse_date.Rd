@@ -4,7 +4,7 @@
 \alias{parse_date}
 \title{Parse date from any format}
 \usage{
-parse_date(dates, approx = TRUE)
+parse_date(dates, approx = TRUE, default_tz = "UTC")
 }
 \arguments{
 \item{dates}{A character vector. An error is reported if
@@ -13,6 +13,10 @@ the function cannot coerce this parameter to a character vector.}
 \item{approx}{Logical flag, whether the git parse should try
 hard(er). If this is set to \code{TRUE}, then the current time is used
 to fill in the missing parts of the date and time.}
+
+\item{default_tz}{Time zone to assume for dates that don't specify a
+time zone explicitly. Defaults to UTC, and an empty string means the
+local time zone.}
 }
 \value{
 A \code{POSIXct} vector. \code{NA} is returned for
@@ -34,6 +38,10 @@ algorithm is the following:
 }
 \code{parse_date} returns quickly in case of empty input elements.
 }
+\details{
+All dates are returned in the UTC time zone. If you preder a different
+time zone, simply use `.POSIXct()` on the result, see examples below.
+}
 \examples{
 # Some easy examples
 parse_date("2014-12-12")
@@ -53,4 +61,16 @@ parse_date("2014")
 
 # Handle vectors and empty input
 parse_date(c("2014","2015","","2016"))
+
+# Convert result to local time
+tz <- format(Sys.time(), "\%Z")
+as.POSIXct(parse_date("2014-12-13T11:12:13"), tz)
+
+# Local time zone
+parse_date("2014-12-13T11:12:13", default_tz = "CET")
+parse_date("2014-12-13T11:12:13", default_tz = "UTC")
+
+# Convert results to different timezone
+parse_date("2015-12-13T11:12:13")
+.POSIXct(parse_date("2015-12-13T11:12:13"), tz = "CET")
 }

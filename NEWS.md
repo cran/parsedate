@@ -1,3 +1,6 @@
+# parsedate 1.3.1
+
+No user visible changes.
 
 # parsedate 1.3.0
 

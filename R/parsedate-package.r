@@ -14,11 +14,10 @@
 #'     a specific ISO 8601 format.
 #' }
 #'
-#' @docType package
 #' @name parsedate-package
 #' @useDynLib parsedate, .registration = TRUE, .fixes = "C_"
 
-NULL
+"_PACKAGE"
 
 ## Some simple utility functions. We used to take them from lubridate,
 ## but that brings in plyr, Rcpp, etc. Better to keep dependencies light.
@@ -54,7 +53,7 @@ yj <- function(x) as.POSIXct(x, format = "%Y %j", tz = "UTC")
 #' }
 #' \code{parse_date} returns quickly in case of empty input elements.
 #'
-#' All dates are returned in the UTC time zone. If you preder a different
+#' All dates are returned in the UTC time zone. If you prefer a different
 #' time zone, simply use `.POSIXct()` on the result, see examples below.
 #'
 #' @param dates A character vector. An error is reported if

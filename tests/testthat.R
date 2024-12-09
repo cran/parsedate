@@ -1,14 +1,23 @@
+# This file is part of the standard setup for testthat.
+# It is recommended that you do not modify it.
+#
+# Where should you do additional test configuration?
+# Learn more about the roles of various files in:
+# * https://r-pkgs.org/testing-design.html#sec-tests-files-overview
+# * https://testthat.r-lib.org/articles/special-files.html
+
 library(testthat)
 library(parsedate)
 
-test_check("parsedate")
-
-run <- function(tz) {
-  source("testthat/helper.R")
-  withr::local_timezone(tz)
+if (Sys.getenv("NOT_CRAN") == "true") {
   test_check("parsedate")
+
+  run <- function(tz) {
+    source("testthat/helper.R")
+    withr::local_timezone(tz)
+    test_check("parsedate")
+  }
+
+  run("CET")
+  run("US/Pacific")
 }
-
-run("CET")
-
-run("US/Pacific")
